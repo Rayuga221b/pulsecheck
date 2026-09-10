@@ -1,0 +1,58 @@
+# Same file runs locally and on the EC2 box (Section 10 is a deploy-target change,
+# not a redesign). M1 scope: postgres, redis, feed-service.
+# prometheus + grafana are added in M2.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: pulsecheck-postgres   # pinned so the M4 watchdog's Docker-SDK lookup is stable
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # named volume -> tick history survives `docker compose down`
+    networks:
+      - pulsecheck-net
+    # No `ports:` — 5432 is NEVER published to the host. feed-service reaches it
+    # by service name over the bridge network. Matches the AWS security-group rule.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: pulsecheck-redis
+    networks:
+      - pulsecheck-net
+    # No `ports:` — 6379 is never published either.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  feed-service:
+    build: ./feed-service
+    container_name: pulsecheck-feed-service
+    env_file: .env            # single source of config; POSTGRES_HOST=postgres, REDIS_HOST=redis
+    ports:
+      - "8000:8000"           # published: Prometheus (M2) and the host watchdog (M4) poll this
+    volumes:
+      - ./logs:/app/logs      # bind mount so the host log-watcher (M3) can tail the JSON log
+    networks:
+      - pulsecheck-net
+    depends_on:
+      postgres:
+        condition: service_healthy   # start ordering only; app-side backoff still covers mid-run failures
+      redis:
+        condition: service_healthy
+
+networks:
+  pulsecheck-net:
+    driver: bridge
+
+volumes:
+  pgdata:
