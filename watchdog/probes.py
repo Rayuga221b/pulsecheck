@@ -105,7 +105,7 @@ class HealthProbe:
             body = ""
             try:
                 body = exc.read(4096).decode("utf-8", "replace")
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
             reason = _reason_from_body(body) or f"HTTP {exc.code}"
             return False, f"/health returned {exc.code}: {reason}", exc.code

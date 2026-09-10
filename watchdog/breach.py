@@ -32,7 +32,7 @@ zero — a fault that isn't continuous isn't the kind this hammer fixes.
 The cost of the threshold: detection latency
 --------------------------------------------------------------------------------
 The trade-off is latency. With ``poll_interval`` = 2s and ``breach_threshold`` =
-3, a hard down takes ~3 polls ≈ 4–6s to *confirm* (the first failure can land
+3, a hard down takes ~3 polls ≈ 4-6s to *confirm* (the first failure can land
 anywhere in a poll interval). That is an acceptable price here: this is an L1
 auto-recovery aid, not a millisecond-SLA system, and 6s of certainty beats 2s of
 guessing. Both numbers live in ``.env`` (``BREACH_THRESHOLD``,
@@ -68,10 +68,10 @@ class Outcome(enum.Enum):
     two of them are actionable; the rest tell the loop to keep polling.
     """
 
-    NOTHING = "nothing"                 # steady state (healthy, or already-open incident still down)
-    FAILURE_CONFIRMED = "failure_confirmed"  # threshold just reached -> open incident, restart, alert
-    RECOVERED = "recovered"            # target came back -> stamp resolved_at, send recovery alert
-    STILL_BREACHING = "still_breaching"  # failing, but under threshold -> log only, do not act yet
+    NOTHING = "nothing"  # steady state: healthy, or an already-open incident still down
+    FAILURE_CONFIRMED = "failure_confirmed"  # threshold hit -> open incident, restart, alert
+    RECOVERED = "recovered"  # target came back -> stamp resolved_at, send recovery alert
+    STILL_BREACHING = "still_breaching"  # failing, but under threshold -> log only, don't act
 
 
 @dataclass

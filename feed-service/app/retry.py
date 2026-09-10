@@ -44,7 +44,7 @@ def connect_with_backoff(
                     extra={"event": "dependency_connected"},
                 )
             return result
-        except Exception as exc:  # noqa: BLE001 - driver exceptions vary; we retry them all
+        except Exception as exc:
             if attempt >= max_attempts:
                 logger.error(
                     "giving up connecting to %s after %d attempts: %s", what, attempt, exc,

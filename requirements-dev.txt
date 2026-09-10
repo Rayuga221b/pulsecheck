@@ -1,0 +1,11 @@
+# Tooling for the test + lint job (M6). Kept separate from the per-component
+# runtime requirements so a production image never pulls pytest/ruff.
+#
+# Install for a full local run:
+#   pip install -r requirements-dev.txt \
+#               -r feed-service/requirements.txt \
+#               -r watchdog/requirements.txt
+# (log_watcher has no third-party deps.) Then: `ruff check .` and `pytest`.
+ruff==0.16.*        # linter; config in ruff.toml, pinned so CI is reproducible
+pytest==8.*         # test runner; config in pytest.ini
+httpx==0.28.*       # required by fastapi.testclient.TestClient for the endpoint tests

@@ -4,11 +4,19 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# NOTE: the M5 fault-injection tools (`stress` for a CPU spike, `iproute2` for
-# `tc` network delay) are intentionally NOT installed here yet. They need an
-# apt-get against deb.debian.org, which the current build environment can't
-# reach. They get added back in M5 when they're actually used. Nothing in M1–M4
-# depends on them.
+# M5 fault-injection tooling: `stress` (CPU spike) and `iproute2` (`tc` netem
+# for network-latency injection). Only used by scripts/induce_failure.sh, never
+# by the service itself.
+#
+# The `|| echo` keeps the build green on networks that can't reach
+# deb.debian.org (this dev box is one — it only has egress to PyPI). Where apt
+# works (CI, EC2) the tools land in the image and induce_failure.sh uses them
+# directly; where it doesn't, the script falls back to a host-side equivalent
+# (a Python busy-loop for CPU, `tc` on the container's veth from the host).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends stress iproute2 \
+    && rm -rf /var/lib/apt/lists/* \
+    || echo "WARNING: could not install stress/iproute2 — induce_failure.sh will use host-side fallbacks"
 
 # Install deps first so Docker layer-caches them when only app code changes.
 COPY requirements.txt .
