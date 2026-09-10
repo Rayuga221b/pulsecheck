@@ -1,0 +1,148 @@
+{
+  "__comment": "Hand-built dashboard for the pulsecheck feed-service. Three panels, one per custom metric: (1) ingestion lag straight off the Gauge, (2) request-latency p95 via histogram_quantile over the Histogram buckets, (3) ticks/sec via rate() over the Counter. Every datasource reference uses the fixed UID 'pulsecheck-prom' set in datasource provisioning. allowUiUpdates is false, so this file stays the source of truth.",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Ingestion lag",
+      "description": "ingestion_lag_seconds Gauge: wall-clock seconds since the last successful tick write. Recomputed at scrape time, so it keeps climbing even if the generator thread is wedged. Healthy value hovers around one tick interval (~0.25s). Sustained growth = ingestion has stalled.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "pulsecheck-prom" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "pulsecheck-prom" },
+          "expr": "ingestion_lag_seconds",
+          "legendFormat": "lag",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 2 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "single", "sort": "none" }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Request latency p95 (ingestion write path)",
+      "description": "histogram_quantile(0.95, ...) over request_latency_seconds_bucket. rate(...[5m]) turns the cumulative bucket counters into a per-second histogram; sum by (le) collapses any labels; histogram_quantile interpolates the 95th percentile from the bucket edges. This is the Postgres INSERT + Redis SET time, not HTTP time.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "pulsecheck-prom" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "pulsecheck-prom" },
+          "expr": "histogram_quantile(0.95, sum(rate(request_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "single", "sort": "none" }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Ticks per second",
+      "description": "sum(rate(ticks_processed_total[1m])). The Counter only ever goes up; rate() gives its per-second slope over a trailing 1m window and transparently handles the reset to 0 on a process restart. With 4 symbols at a 0.25s interval the steady-state value is ~16/s.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "pulsecheck-prom" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "pulsecheck-prom" },
+          "expr": "sum(rate(ticks_processed_total[1m]))",
+          "legendFormat": "ticks/sec",
+          "interval": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "mean"] },
+        "tooltip": { "mode": "single", "sort": "none" }
+      }
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["pulsecheck"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "pulsecheck — feed-service",
+  "uid": "pulsecheck-feed",
+  "version": 1,
+  "weekStart": ""
+}
