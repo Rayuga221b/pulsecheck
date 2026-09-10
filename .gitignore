@@ -13,6 +13,9 @@ venv/
 # --- Runtime artifacts ---
 logs/
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
 
 # --- Internal notes (not part of the deliverable) ---
 CLAUDE.md

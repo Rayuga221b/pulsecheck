@@ -16,7 +16,7 @@ Design choices worth explaining:
   text, and is unambiguous across timezones.
 * **``resolved_at`` NULL means the incident is still open.** Recovery is a second
   UPDATE that stamps ``resolved_at``; incident duration = ``resolved_at`` minus
-  ``detected_at``, which is what the Discord message reports.
+  ``detected_at``, which is what the Slack recovery message reports.
 """
 
 import os
@@ -99,6 +99,53 @@ def open_incident(
         )
         conn.commit()
         return int(cur.lastrowid)
+    finally:
+        conn.close()
+
+
+def set_action(incident_id: int, action_taken: str, *, db_path: str = INCIDENTS_DB_PATH) -> None:
+    """Record what the watchdog did about an incident (e.g. 'restarted container').
+
+    Split from :func:`open_incident` because the watchdog opens the row the moment
+    a failure is *confirmed*, then attempts the recovery action, then writes what
+    actually happened here — the row is never left claiming an action that failed.
+    """
+    conn = connect(db_path)
+    try:
+        conn.execute(
+            "UPDATE incidents SET action_taken = ? WHERE id = ?",
+            (action_taken, incident_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def resolve_incident(
+    incident_id: int,
+    *,
+    resolved_at: str | None = None,
+    db_path: str = INCIDENTS_DB_PATH,
+) -> None:
+    """Stamp ``resolved_at`` on an open incident — the UPDATE side of the pair.
+
+    Kept next to :func:`open_incident` and the ``CREATE TABLE`` on purpose: the
+    two writers (log-watcher opens rows, watchdog opens *and* closes them) must
+    agree on the column list, so all of the SQL for this table lives in one file.
+
+    Only touches rows that are still open (``resolved_at IS NULL``) so a repeated
+    "recovered" signal can't overwrite the first — and therefore correct —
+    recovery timestamp.
+    """
+    resolved_at = resolved_at or utcnow_iso()
+    conn = connect(db_path)
+    try:
+        conn.execute(
+            "UPDATE incidents SET resolved_at = ? "
+            "WHERE id = ? AND resolved_at IS NULL",
+            (resolved_at, incident_id),
+        )
+        conn.commit()
     finally:
         conn.close()
 
