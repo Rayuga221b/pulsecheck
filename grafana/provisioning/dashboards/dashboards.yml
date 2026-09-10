@@ -1,0 +1,20 @@
+# Grafana dashboard provider.
+#
+# Tells Grafana to load every dashboard JSON found under the mounted folder on
+# startup and keep watching it. The single dashboard (pulsecheck.json) is
+# hand-built and checked into the repo, not imported from grafana.com — the
+# point of the project is to be able to explain every panel's query.
+
+apiVersion: 1
+
+providers:
+  - name: pulsecheck
+    orgId: 1
+    folder: ""                     # put it at the top level, no folder nesting
+    type: file
+    disableDeletion: true          # UI can't delete a provisioned dashboard
+    allowUiUpdates: false          # edits in the UI don't overwrite the file
+    updateIntervalSeconds: 10
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

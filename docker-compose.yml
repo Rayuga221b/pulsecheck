@@ -1,6 +1,7 @@
 # Same file runs locally and on the EC2 box (Section 10 is a deploy-target change,
 # not a redesign). M1 scope: postgres, redis, feed-service.
-# prometheus + grafana are added in M2.
+# M2 adds: prometheus (scrapes feed-service:8000/metrics every 5s) and grafana
+# (datasource + one 3-panel dashboard, both provisioned from ./grafana).
 
 services:
   postgres:
@@ -50,9 +51,55 @@ services:
       redis:
         condition: service_healthy
 
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: pulsecheck-prometheus   # pinned for the M4 watchdog's Docker-SDK lookup
+    volumes:
+      # Config only, read-only. The TSDB lives in the anonymous volume Prometheus
+      # declares at /prometheus; demo data is disposable so it is not named.
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      # Keep the local demo footprint small; 24h of 5s scrapes is plenty.
+      - --storage.tsdb.retention.time=24h
+    ports:
+      - "9090:9090"   # published so the checkpoint can eyeball Status > Targets = UP
+    networks:
+      - pulsecheck-net
+    depends_on:
+      - feed-service   # not a hard requirement (Prometheus retries), just start ordering
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: pulsecheck-grafana
+    environment:
+      # Local demo credentials only. On EC2 the security group limits 3000 to a
+      # single source IP (Section 10b); this is not a public instance.
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      # Anonymous read-only view so the demo dashboard opens with no login.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_DEFAULT_THEME: light
+    volumes:
+      # Provisioning (datasource + dashboard provider) and the dashboard JSON are
+      # read-only from the repo. Grafana's own state (sessions, prefs) goes in the
+      # named volume so it survives `docker compose down` without hiding drift in
+      # the provisioned config.
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - pulsecheck-net
+    depends_on:
+      - prometheus
+
 networks:
   pulsecheck-net:
     driver: bridge
 
 volumes:
   pgdata:
+  grafana-data:
