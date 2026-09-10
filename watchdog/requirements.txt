@@ -1,0 +1,7 @@
+# The watchdog has exactly ONE third-party dependency: the Docker SDK.
+# Everything else (HTTP /health poll, Slack webhook POST, SQLite) is standard
+# library on purpose — fewer things to install and keep patched on the host.
+#
+# It also does `import incidents` from the repo root for the shared SQLite
+# schema, so run it from the repo root as `python -m watchdog`.
+docker==7.*   # docker-py: talks to the daemon over the Unix socket; used to read container state and restart it
