@@ -21,6 +21,7 @@ Design choices worth explaining:
 
 import os
 import sqlite3
+from datetime import datetime, timezone
 
 # Path is configurable so tests can point at a throwaway file and the EC2 box can
 # put it somewhere predictable. Default: a file in the current working directory.
@@ -63,6 +64,41 @@ def init(db_path: str = INCIDENTS_DB_PATH) -> None:
     try:
         conn.execute(_SCHEMA)
         conn.commit()
+    finally:
+        conn.close()
+
+
+def utcnow_iso() -> str:
+    """ISO-8601 UTC with a trailing ``Z`` — the timestamp format every row uses."""
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def open_incident(
+    component: str,
+    detected_via: str,
+    symptom: str,
+    *,
+    detected_at: str | None = None,
+    action_taken: str | None = None,
+    db_path: str = INCIDENTS_DB_PATH,
+) -> int:
+    """Insert one open incident row (``resolved_at`` left NULL) and return its id.
+
+    Kept here rather than in the log-watcher / watchdog so the INSERT column list
+    lives next to the ``CREATE TABLE`` and the two writers can't drift. The
+    watchdog will add the matching ``resolve_incident`` (the UPDATE side) in M4.
+    """
+    detected_at = detected_at or utcnow_iso()
+    conn = connect(db_path)
+    try:
+        cur = conn.execute(
+            "INSERT INTO incidents "
+            "(detected_at, component, detected_via, symptom, action_taken) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (detected_at, component, detected_via, symptom, action_taken),
+        )
+        conn.commit()
+        return int(cur.lastrowid)
     finally:
         conn.close()
 
