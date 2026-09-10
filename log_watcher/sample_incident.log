@@ -1,0 +1,16 @@
+{"ts":"2026-09-10T12:00:00.001000+00:00","level":"INFO","event":"tick_write","detail":"wrote tick AAPL=100.1234"}
+{"ts":"2026-09-10T12:00:00.002000+00:00","level":"INFO","event":"tick_write","detail":"wrote tick GOOG=99.8765"}
+{"ts":"2026-09-10T12:00:00.500000+00:00","level":"ERROR","event":"tick_write_error","detail":"tick write failed for AAPL: Error 111 connecting to redis:6379. Connection refused."}
+{"ts":"2026-09-10T12:00:00.600000+00:00","level":"WARNING","event":"dependency_retry","detail":"redis not ready (attempt 1/10): Error 111 connecting to redis:6379. Connection refused. -- retrying in 1s"}
+{"ts":"2026-09-10T12:00:00.900000+00:00","level":"ERROR","event":"tick_write_error","detail":"tick write failed for GOOG: Error 111 connecting to redis:6379. Connection refused."}
+{"ts":"2026-09-10T12:00:01.300000+00:00","level":"ERROR","event":"tick_write_error","detail":"tick write failed for MSFT: Error 111 connecting to redis:6379. Connection refused."}
+{"ts":"2026-09-10T12:00:01.700000+00:00","level":"WARNING","event":"dependency_retry","detail":"redis not ready (attempt 2/10): Error 111 connecting to redis:6379. Connection refused. -- retrying in 2s"}
+{"ts":"2026-09-10T12:00:01.900000+00:00","level":"ERROR","event":"tick_write_error","detail":"tick write failed for AMZN: Error 111 connecting to redis:6379. Connection refused."}
+{"ts":"2026-09-10T12:00:02.400000+00:00","level":"ERROR","event":"tick_write_error","detail":"tick write failed for AAPL: Error 111 connecting to redis:6379. Connection refused."}
+{"ts":"2026-09-10T12:00:03.100000+00:00","level":"ERROR","event":"tick_write_error","detail":"tick write failed for GOOG: Error 111 connecting to redis:6379. Connection refused."}
+{"ts":"2026-09-10T12:00:03.800000+00:00","level":"WARNING","event":"dependency_retry","detail":"redis not ready (attempt 3/10): Error 111 connecting to redis:6379. Connection refused. -- retrying in 4s"}
+{"ts":"2026-09-10T12:00:04.500000+00:00","level":"ERROR","event":"tick_write_error","detail":"tick write failed for MSFT: Error 111 connecting to redis:6379. Connection refused."}
+{"ts":"2026-09-10T12:00:08.000000+00:00","level":"WARNING","event":"dependency_retry","detail":"redis not ready (attempt 4/10): Error 111 connecting to redis:6379. Connection refused. -- retrying in 8s"}
+{"ts":"2026-09-10T12:00:16.000000+00:00","level":"ERROR","event":"dependency_unreachable","detail":"giving up connecting to redis after 5 attempts: Error 111 connecting to redis:6379. Connection refused."}
+{"ts":"2026-09-10T12:00:40.000000+00:00","level":"INFO","event":"generator_reconnect","detail":"reconnected to dependencies"}
+{"ts":"2026-09-10T12:00:40.100000+00:00","level":"INFO","event":"tick_write","detail":"wrote tick AAPL=100.4567"}
