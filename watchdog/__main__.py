@@ -128,7 +128,7 @@ def _handle_confirmed_failure(
         container.restart(timeout_seconds=restart_timeout)
         action_taken = f"restarted container {container.name}"
         log.info("restarted container %s", container.name)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         action_taken = f"restart FAILED: {exc}"
         log.exception("failed to restart container")
 
@@ -234,7 +234,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         prober = _build_prober()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         # Almost always a bad/absent Docker socket. Fail loudly at startup.
         log.error("cannot start watchdog: %s", exc)
         return 2

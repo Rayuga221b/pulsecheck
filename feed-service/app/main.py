@@ -64,14 +64,14 @@ def health() -> Response:
 
     try:
         db.ping()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         result["postgres"] = f"error: {exc}"
         result["status"] = "unhealthy"
         status_code = 503
 
     try:
         cache.ping()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         result["redis"] = f"error: {exc}"
         result["status"] = "unhealthy"
         status_code = 503

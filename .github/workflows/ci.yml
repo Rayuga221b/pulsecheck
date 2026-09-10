@@ -1,0 +1,102 @@
+# CI pipeline (M6). Order mirrors the spec in CLAUDE.md §8:
+#   lint (ruff)  ->  test (pytest)  ->  Trivy scan on the built image  ->  build  ->  push
+#
+# The push only happens on a push to `dev` or `main` in this repo (never on a
+# pull request, never from a fork) and uses two repo secrets — DOCKERHUB_USERNAME
+# and DOCKERHUB_TOKEN. No credentials are committed anywhere; the token is a
+# scoped Docker Hub access token, not an account password.
+
+name: ci
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+# A newer push to the same branch/PR cancels an in-flight run — no point linting
+# a commit that has already been superseded.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"   # matches feed-service/Dockerfile (python:3.12-slim)
+          cache: pip
+
+      - name: Install tooling + component dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Dev tooling (ruff, pytest, httpx) + every component that gets imported
+          # during collection. log_watcher has no third-party deps.
+          pip install -r requirements-dev.txt \
+                      -r feed-service/requirements.txt \
+                      -r watchdog/requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Test (pytest)
+        run: pytest
+
+  image:
+    # Build/scan/push only after lint + tests are green.
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    env:
+      # One place to change the image name. The repo owner's Docker Hub namespace
+      # comes from the secret so a fork with its own secret still works.
+      IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/pulsecheck-feed-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (local, not pushed yet)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./feed-service
+          load: true                       # load into the runner's Docker so Trivy can scan it
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan image (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          format: table
+          exit-code: "1"          # fail the build if the policy below matches
+          severity: CRITICAL      # block on CRITICAL only; HIGH is reported but not gating
+          ignore-unfixed: true    # don't fail on CVEs with no fix available upstream yet
+          vuln-type: os,library
+
+      - name: Log in to Docker Hub
+        # Skip for pull requests and for forks (no access to the secrets anyway).
+        if: github.event_name == 'push' && github.repository == 'Rayuga221b/pulsecheck'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push image
+        if: github.event_name == 'push' && github.repository == 'Rayuga221b/pulsecheck'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./feed-service
+          push: true
+          # Tag with both the commit SHA (immutable, traceable) and the branch
+          # name (a moving "latest for this branch" pointer the EC2 box can pull).
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

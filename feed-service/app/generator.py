@@ -78,7 +78,7 @@ class TickGenerator:
                 price = self._next_price(symbol)
                 try:
                     self._write(symbol, price)
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     # Log the failure as structured data and try to rebuild the
                     # broken connection(s). The loop keeps going.
                     log.error(
@@ -117,7 +117,7 @@ class TickGenerator:
             self._pg = db.connect_with_retry()
             self._redis = cache.connect_with_retry()
             log.info("reconnected to dependencies", extra={"event": "generator_reconnect"})
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.error(
                 "reconnect failed: %s", exc,
                 extra={"event": "generator_reconnect_failed"}, exc_info=True,
