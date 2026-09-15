@@ -1,0 +1,6 @@
+# Pinned to minor versions: reproducible builds without fighting patch bumps.
+fastapi==0.115.*
+uvicorn[standard]==0.32.*
+psycopg2-binary==2.9.*      # sync Postgres driver; -binary ships wheels, no build toolchain
+redis==5.*                 # sync client with a built-in connection pool (thread-safe)
+prometheus-client==0.21.*  # /metrics exposition + the Gauge/Counter/Histogram types

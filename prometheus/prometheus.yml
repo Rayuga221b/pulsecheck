@@ -1,0 +1,45 @@
+# Prometheus scrape config — deliberately minimal.
+#
+# Design choices to be able to defend in an interview:
+#
+# * ONE static target, no service discovery. The whole stack is a single
+#   docker-compose project on one host; the feed-service container name is
+#   fixed. File-based or DNS SD would be extra moving parts with nothing to
+#   discover. If this grew to many instances, `docker_sd_config` or a
+#   file_sd_config would be the next step.
+#
+# * scrape_interval 5s. The dashboard's fastest-moving panel is ticks/sec via
+#   rate() over a 1m window; 5s spacing gives ~12 samples per window, enough for
+#   a smooth line without hammering the app. Prometheus' own default is 15s,
+#   which is fine for infra but feels laggy in a live demo.
+#
+# * scrape_timeout 4s < scrape_interval 5s. A scrape must finish before the next
+#   one starts. /metrics does no I/O (it only renders in-memory counters), so
+#   4s is already very generous; if a scrape ever times out that itself is a
+#   signal something is very wrong.
+#
+# * No remote_write, no Alertmanager. Alerting/escalation is the watchdog's job
+#   (it calls the Discord webhook directly). Adding Alertmanager here would be
+#   tool-stacking for the same outcome.
+
+global:
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  # Labels attached to every metric this server scrapes — handy once there is
+  # more than one environment (local vs the EC2 box).
+  external_labels:
+    project: pulsecheck
+
+scrape_configs:
+  # The feed-service is the only thing we scrape. Prometheus also scrapes
+  # itself below so we can tell "Prometheus is down" from "the target is down".
+  - job_name: feed-service
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["feed-service:8000"]
+        labels:
+          component: ingestion
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

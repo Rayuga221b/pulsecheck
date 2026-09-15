@@ -1,0 +1,41 @@
+# Ruff configuration — pinned explicitly rather than relying on Ruff's built-in
+# default rule set, because that default shifts between Ruff releases and CI must
+# be reproducible. A standalone ruff.toml (not pyproject.toml) keeps this in line
+# with the "no monorepo tooling, per-folder requirements" decision in CLAUDE.md:
+# it is linter config, nothing more.
+
+# 88 is Black's default and a bit tight for this codebase's descriptive names;
+# 100 keeps the "why" comments and f-strings on one line without contortions.
+line-length = 100
+target-version = "py312"  # matches feed-service/Dockerfile (python:3.12-slim)
+
+[lint]
+# E/W  pycodestyle      — style + the E402 "import not at top" the host scripts
+#                          deliberately trip (and silence inline with noqa).
+# F    pyflakes         — real bugs: undefined names, unused imports, f-strings
+#                          with no placeholders.
+# I    isort            — deterministic import order.
+# B    flake8-bugbear   — likely-wrong constructs (mutable default args, except
+#                          without `raise`, loop-variable closures).
+# RUF  ruff-native      — includes RUF100, which fails the build on a stale noqa.
+#
+# Not selected: BLE (flake8-blind-except). Every bare `except Exception` in this
+# repo is a deliberate "log it and carry on", explained in a comment at the point
+# it happens; turning it into a lint error we then blanket-`noqa` adds noise
+# without adding a check.
+select = ["E", "W", "F", "I", "B", "RUF"]
+
+[lint.isort]
+# These are the repo's own modules — keep them in their own import group so the
+# host scripts' "stdlib / third-party / first-party" ordering stays obvious.
+known-first-party = ["app", "incidents", "watchdog", "log_watcher"]
+
+[lint.per-file-ignores]
+# The two host entry points must fix up sys.path *before* they can import the
+# shared `incidents` module and their own packages, so their import block is
+# intentionally not in a single sorted run. The ordering is load-bearing and
+# commented in each file; let it be.
+"watchdog/__main__.py" = ["I001"]
+"log_watcher/__main__.py" = ["I001"]
+# Test files: allow the unused `app` import in fixtures and long assert lines.
+"**/tests/**" = ["E501"]

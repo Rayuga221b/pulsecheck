@@ -1,0 +1,7 @@
+# log-watcher has NO third-party dependencies — standard library only
+# (argparse, json, os, sys, datetime, collections, time).
+#
+# That is a deliberate design point: it's "grep with memory", not a log
+# platform. Nothing to pip-install on the host, nothing to keep patched.
+# It does `import incidents` from the repo root for the shared SQLite schema;
+# run it from the repo root as `python -m log_watcher`.

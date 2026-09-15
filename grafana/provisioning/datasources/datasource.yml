@@ -1,0 +1,25 @@
+# Grafana datasource provisioning.
+#
+# Provisioned (not clicked in the UI) so a fresh `docker-compose up` comes up
+# with the datasource already wired — nothing to set up by hand for the demo,
+# and the config lives in git.
+#
+# The URL uses the compose service name `prometheus` over the shared bridge
+# network. Port 9090 is Prometheus' in-container port (also published to the
+# host, but Grafana talks to it container-to-container).
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: pulsecheck-prom   # fixed UID so the checked-in dashboard JSON can
+                           # reference it deterministically (no import-time UID)
+    access: proxy          # Grafana's backend calls Prometheus, not the browser
+    url: http://prometheus:9090
+    isDefault: true        # dashboard panels reference it by default, no UID juggling
+    editable: false        # provisioned config is the source of truth; no UI drift
+    jsonData:
+      # Match Prometheus' scrape_interval so Grafana's "min step" lines up and
+      # rate() windows in panels behave predictably.
+      timeInterval: 5s

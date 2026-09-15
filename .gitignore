@@ -1,1 +1,24 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# --- Secrets / config ---
+.env
+
+# --- Runtime artifacts ---
+logs/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+
+# --- Internal notes (not part of the deliverable) ---
 CLAUDE.md
+INTERVIEW_PREP.md
+RESUME_CLAIMS.md
+CONCEPTS.md
